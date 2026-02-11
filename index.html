@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dev Orçamentos | TI & Suporte</title>
+  <style>
+    :root{
+      --bg:#0d1117;--container-bg:#161b22;--text:#c9d1d9;
+      --blue:#58a6ff;--green:#238636;--red:#da3633;--border:#30363d;
+    }
+    body{
+      font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--text);
+      display:flex;justify-content:center;padding:20px;margin:0;
+    }
+    .container{
+      background:var(--container-bg);padding:1.5rem;border-radius:12px;border:1px solid var(--border);
+      width:100%;max-width:450px;box-shadow:0 10px 25px rgba(0,0,0,.5);
+    }
+    h2{color:var(--blue);text-align:center;margin-top:0}
+    .input-group{margin-bottom:12px}
+    label{display:block;margin-bottom:5px;font-size:.9rem;color:#8b949e}
+    input[type="text"],input[type="number"]{
+      width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);
+      color:white;border-radius:6px;box-sizing:border-box;
+    }
+    .row{display:flex;gap:10px}
+    button{
+      width:100%;padding:12px;border:none;border-radius:6px;cursor:pointer;
+      font-weight:bold;margin-top:10px;transition:.2s;
+    }
+    .btn-add{background-color:var(--blue);color:white}
+    .btn-whatsapp{background-color:#25d366;color:white;font-size:1rem;margin-top:20px}
+    .btn-clear{background:transparent;color:var(--red);border:1px solid var(--red);font-size:.8rem;padding:8px;margin-top:15px}
+
+    #lista-itens{margin-top:20px}
+    .item{
+      background:#21262d;padding:10px;margin-bottom:8px;border-radius:6px;
+      display:flex;justify-content:space-between;align-items:center;border-left:4px solid var(--blue);
+      gap:10px;
+    }
+    .item .left{display:flex;flex-direction:column;gap:2px}
+    .item small{color:#8b949e}
+    .item .actions{display:flex;gap:8px;align-items:center}
+    .btn-del{
+      background:transparent;border:1px solid var(--red);color:var(--red);
+      padding:6px 10px;border-radius:6px;cursor:pointer;font-size:.85rem;
+    }
+
+    .total-container{margin-top:15px;padding:10px;border-top:1px solid var(--border)}
+    .price-row{display:flex;justify-content:space-between;margin-bottom:5px}
+    .pix-highlight{color:#58a6ff;font-weight:bold;font-size:1.2rem}
+    .pix-box{
+      background:#1c2128;border:1px dashed var(--blue);padding:10px;
+      font-size:.8rem;text-align:center;margin-top:10px;border-radius:6px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h2>💻 TI Services | Orçamento</h2>
+
+    <div class="input-group">
+      <label>Serviço</label>
+      <input type="text" id="servico" placeholder="Ex: Formatação de PC" autocomplete="off" />
+    </div>
+
+    <div class="row">
+      <div class="input-group" style="flex:1;">
+        <label>Qtd</label>
+        <input type="number" id="qtd" value="1" min="1" step="1" inputmode="numeric" />
+      </div>
+      <div class="input-group" style="flex:2;">
+        <label>Valor Unit. (R$)</label>
+        <input type="number" id="valor" step="0.01" min="0" placeholder="0,00" inputmode="decimal" />
+      </div>
+    </div>
+
+    <button class="btn-add" id="btnAdd" type="button">⚡ Adicionar à Lista</button>
+
+    <div id="lista-itens"></div>
+
+    <div class="total-container">
+      <div class="price-row">
+        <span>Total à Vista (Pix):</span>
+        <span id="total-pix" class="pix-highlight">R$ 0,00</span>
+      </div>
+      <div class="price-row" style="color:#8b949e;font-size:.9rem;">
+        <span>Total no Cartão (+5%):</span>
+        <span id="total-cartao">R$ 0,00</span>
+      </div>
+    </div>
+
+    <div class="pix-box">
+      🔑 <b>Chave Pix:</b> <span id="chave-pix">32622255845</span>
+    </div>
+
+    <button class="btn-whatsapp" id="btnZap" type="button">🚀 Enviar Orçamento (WhatsApp)</button>
+    <button class="btn-clear" id="btnClear" type="button">Limpar Tudo</button>
+  </div>
+
+  <script>
+    // ===== Config =====
+    const STORAGE_KEY = "freela_ti_itens";
+    const ACRESCIMO_CARTAO = 0.05;
+    const CHAVE_PIX = "32622255845";
+
+    // ===== State =====
+    let itens = safeLoad();
+
+    // ===== DOM =====
+    const elServico = document.getElementById("servico");
+    const elQtd = document.getElementById("qtd");
+    const elValor = document.getElementById("valor");
+    const elLista = document.getElementById("lista-itens");
+    const elTotalPix = document.getElementById("total-pix");
+    const elTotalCartao = document.getElementById("total-cartao");
+    document.getElementById("chave-pix").innerText = CHAVE_PIX;
+
+    document.getElementById("btnAdd").addEventListener("click", adicionarItem);
+    document.getElementById("btnClear").addEventListener("click", limparTudo);
+    document.getElementById("btnZap").addEventListener("click", enviarWhatsapp);
+
+    // Enter adiciona item (clássico e prático)
+    [elServico, elQtd, elValor].forEach(el => {
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") adicionarItem();
+      });
+    });
+
+    // Inicializa
+    atualizarInterface();
+
+    // ===== Helpers =====
+    function safeLoad() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const data = raw ? JSON.parse(raw) : [];
+        return Array.isArray(data) ? data : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function salvar() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(itens));
+    }
+
+    function moedaBR(valor) {
+      return (Number(valor) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+
+    function normalizeServico(s) {
+      return (s || "").trim().replace(/\s+/g, " ");
+    }
+
+    function round2(n) {
+      return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+    }
+
+    // ===== Core =====
+    function adicionarItem() {
+      const servico = normalizeServico(elServico.value);
+      const qtd = Number(elQtd.value);
+      const valorUnit = Number(elValor.value);
+
+      // Validação correta (sem “!qtd” que falha com 0)
+      if (!servico) return alert("Informe o serviço.");
+      if (!Number.isFinite(qtd) || qtd <= 0) return alert("Quantidade inválida.");
+      if (!Number.isFinite(valorUnit) || valorUnit <= 0) return alert("Valor unitário inválido.");
+
+      const total = round2(qtd * valorUnit);
+
+      itens.push({ servico, qtd, valorUnit: round2(valorUnit), total });
+      salvar();
+      atualizarInterface();
+
+      // limpa e foca
+      elServico.value = "";
+      elValor.value = "";
+      elQtd.value = "1";
+      elServico.focus();
+    }
+
+    function removerItem(index) {
+      itens.splice(index, 1);
+      salvar();
+      atualizarInterface();
+    }
+
+    function atualizarInterface() {
+      elLista.innerHTML = "";
+
+      let somaBase = 0;
+
+      itens.forEach((item, idx) => {
+        somaBase += Number(item.total) || 0;
+
+        const div = document.createElement("div");
+        div.className = "item";
+
+        const left = document.createElement("div");
+        left.className = "left";
+        left.innerHTML = `
+          <strong>${item.qtd}x ${escapeHtml(item.servico)}</strong>
+          <small>Unit.: ${moedaBR(item.valorUnit)} • Total: ${moedaBR(item.total)}</small>
+        `;
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const price = document.createElement("span");
+        price.textContent = moedaBR(item.total);
+
+        const btn = document.createElement("button");
+        btn.className = "btn-del";
+        btn.type = "button";
+        btn.textContent = "Remover";
+        btn.addEventListener("click", () => removerItem(idx));
+
+        actions.appendChild(price);
+        actions.appendChild(btn);
+
+        div.appendChild(left);
+        div.appendChild(actions);
+        elLista.appendChild(div);
+      });
+
+      const totalCartao = somaBase * (1 + ACRESCIMO_CARTAO);
+
+      elTotalPix.innerText = moedaBR(somaBase);
+      elTotalCartao.innerText = moedaBR(totalCartao);
+    }
+
+    function limparTudo() {
+      if (confirm("Deseja limpar a lista?")) {
+        itens = [];
+        localStorage.removeItem(STORAGE_KEY);
+        atualizarInterface();
+      }
+    }
+
+    function enviarWhatsapp() {
+      if (itens.length === 0) return alert("Adicione pelo menos um serviço!");
+
+      let somaBase = 0;
+
+      // Unicode (ok, você fez certo)
+      const emojiFerramenta = "\uD83D\uDEE0"; // 🛠️
+      const emojiCheck = "\u2705";           // ✅
+      const emojiDinheiro = "\uD83D\uDCB0";  // 💰
+      const emojiCartao = "\uD83D\uDCB3";    // 💳
+      const emojiAviso = "\u26A0\uFE0F";     // ⚠️
+      const emojiFoguete = "\uD83D\uDE80";   // 🚀
+
+      let msg = "ORÇAMENTO - SERVIÇOS DE TI " + emojiFerramenta + "\n\n";
+      msg += "Olá! Segue o detalhamento dos serviços solicitados:\n\n";
+
+      itens.forEach(item => {
+        const total = Number(item.total) || 0;
+        somaBase += total;
+
+        msg += emojiCheck + " *" + String(item.servico).toUpperCase() + "*\n";
+        msg += "└ Qtd: " + item.qtd + " | Total: " + moedaBR(total) + "\n\n";
+      });
+
+      const totalCartao = somaBase * (1 + ACRESCIMO_CARTAO);
+
+      msg += "──────────────────\n";
+      msg += emojiDinheiro + " *TOTAL À VISTA (PIX): " + moedaBR(somaBase) + "*\n";
+      msg += emojiCartao + " *TOTAL NO CARTÃO: " + moedaBR(totalCartao) + "*\n\n";
+
+      msg += "Pagamento via PIX ◇\n";
+      msg += "Chave: " + CHAVE_PIX + "\n\n";
+
+      msg += emojiAviso + " *Nota:* No cartão há acréscimo de 5% (taxas da operadora).\n";
+      msg += "👉 _Se preferir pagar no cartão, me avise que eu gero o link de pagamento!_\n\n";
+      msg += "Fico no aguardo da sua confirmação para agendarmos! " + emojiFoguete;
+
+      const linkFinal = "https://wa.me/?text=" + encodeURIComponent(msg);
+      window.open(linkFinal, "_blank");
+    }
+
+    // Evita injection (bom costume)
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
+</body>
+</html>
