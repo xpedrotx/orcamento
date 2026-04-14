@@ -87,7 +87,7 @@
         <span id="total-pix" class="pix-highlight">R$ 0,00</span>
       </div>
       <div class="price-row" style="color:#8b949e;font-size:.9rem;">
-        <span>Total no Cartão (+5%):</span>
+        <span>Crédito à Vista (+5%):</span>
         <span id="total-cartao">R$ 0,00</span>
       </div>
     </div>
@@ -246,38 +246,47 @@
 
       let somaBase = 0;
 
-      // Unicode (ok, você fez certo)
-      const emojiFerramenta = "\uD83D\uDEE0"; // 🛠️
-      const emojiCheck = "\u2705";           // ✅
-      const emojiDinheiro = "\uD83D\uDCB0";  // 💰
-      const emojiCartao = "\uD83D\uDCB3";    // 💳
-      const emojiAviso = "\u26A0\uFE0F";     // ⚠️
-      const emojiFoguete = "\uD83D\uDE80";   // 🚀
+      // 1. Declaramos TODAS as variáveis e constantes no topo
+      const emojiFerramenta = "🛠️";
+      const emojiCheck = "✅";
+      const emojiDinheiro = "💰";
+      const emojiCartao = "💳";
+      const emojiAviso = "⚠️";
+      const emojiFoguete = "🚀";
+      const emojiEstrela = "⭐";
+      const linkGoogle = "https://share.google/9Kcq7yRdKH38euysc";
 
-      let msg = "PEDROTX - SERVIÇOS DE TI " + emojiFerramenta + "\n\n";
-      msg += "Olá! Segue o orçamento e detalhamento dos serviços solicitados:\n\n";
+      let msg = `*PEDROTX - SERVIÇOS DE TI* ${emojiFerramenta}\n\n`;
+      msg += `Olá! Segue o orçamento e detalhamento dos serviços solicitados:\n\n`;
 
       itens.forEach(item => {
         const total = Number(item.total) || 0;
         somaBase += total;
 
-        msg += emojiCheck + " *" + String(item.servico).toUpperCase() + "*\n";
-        msg += "└ Qtd: " + item.qtd + " | Total: " + moedaBR(total) + "\n\n";
+        msg += `${emojiCheck} *${String(item.servico).toUpperCase()}*\n`;
+        msg += `└ Qtd: ${item.qtd} | Total: ${moedaBR(total)}\n\n`;
       });
 
       const totalCartao = somaBase * (1 + ACRESCIMO_CARTAO);
 
       msg += "──────────────────\n";
-      msg += emojiDinheiro + " *TOTAL À VISTA (PIX): " + moedaBR(somaBase) + "*\n";
-      msg += emojiCartao + " *TOTAL NO CARTÃO: " + moedaBR(totalCartao) + "*\n\n";
+      msg += `${emojiDinheiro} *TOTAL À VISTA (PIX): ${moedaBR(somaBase)}*\n`;
+      msg += `${emojiCartao} *TOTAL NO CRÉDITO À VISTA: ${moedaBR(totalCartao)}*\n\n`;
 
-      msg += "Pagamento via PIX ◇\n";
-      msg += "Chave: " + CHAVE_PIX + "\n\n";
+      msg += `Pagamento via PIX ◇\n`;
+      msg += `Chave: ${CHAVE_PIX}\n\n`;
 
-      msg += emojiAviso + " *Nota:* No cartão há um acréscimo de 5% (taxas da operadora).\n";
-      msg += "👉 _Se preferir pagar no cartão, me avise que eu gero o link de pagamento!_\n\n";
-      msg += "Fico no aguardo da sua confirmação! " + emojiFoguete;
+      // 2. Mantemos a nossa proteção contra prejuízos no parcelamento
+      msg += `${emojiAviso} *Nota:* O valor no cartão inclui acréscimo de 5% válido APENAS para crédito em 1x. Para parcelamento, favor me consultar sobre as taxas aplicáveis.\n`;
+      msg += `👉 _Se preferir pagar no cartão, me avise que eu gero o link de pagamento!_\n\n`;
 
+      // 3. E agora sim, o gancho do Google no final, usando as variáveis já declaradas
+      msg += `${emojiEstrela} *Conheça meu trabalho ou deixe sua avaliação no Google:*\n`;
+      msg += `${linkGoogle}\n\n`;
+
+      msg += `Fico no aguardo da sua confirmação! ${emojiFoguete}`;
+
+      // 4. Executa a abertura do WhatsApp
       const linkFinal = "https://wa.me/?text=" + encodeURIComponent(msg);
       window.open(linkFinal, "_blank");
     }
