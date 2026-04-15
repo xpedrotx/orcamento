@@ -129,7 +129,10 @@
 
     document.getElementById("btnAdd").addEventListener("click", adicionarItem);
     document.getElementById("btnClear").addEventListener("click", limparTudo);
-    document.getElementById("btnZap").addEventListener("click", enviarWhatsapp);
+    
+    // Olha os botões novos assumindo o controle aqui:
+    document.getElementById("btnOrcamento").addEventListener("click", () => enviarZap("orcamento"));
+    document.getElementById("btnCobranca").addEventListener("click", () => enviarZap("cobranca"));
 
     // Enter adiciona item (clássico e prático)
     [elServico, elQtd, elValor].forEach(el => {
@@ -249,10 +252,6 @@
         atualizarInterface();
       }
     }
-
-    // ===== Eventos dos Novos Botões =====
-    document.getElementById("btnOrcamento").addEventListener("click", () => enviarZap("orcamento"));
-    document.getElementById("btnCobranca").addEventListener("click", () => enviarZap("cobranca"));
 
     function enviarZap(tipo) {
       if (itens.length === 0) return alert("Adicione pelo menos um serviço!");
