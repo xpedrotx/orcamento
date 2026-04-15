@@ -20,9 +20,15 @@
     h2{color:var(--blue);text-align:center;margin-top:0}
     .input-group{margin-bottom:12px}
     label{display:block;margin-bottom:5px;font-size:16px;color:#8b949e}
-    input[type="text"],input[type="number"]{
-      width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);
-      color:white;border-radius:6px;box-sizing:border-box;
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: white;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 16px; /* Impede o zoom no iOS */
     }
     .row{display:flex;gap:10px}
     button{
@@ -96,11 +102,14 @@
       🔑 <b>Chave Pix:</b> <span id="chave-pix">32622255845</span>
     </div>
 
-    <button class="btn-whatsapp" id="btnZap" type="button">🚀 Enviar Orçamento (WhatsApp)</button>
-    <button class="btn-clear" id="btnClear" type="button">Limpar Tudo</button>
-  </div>
+    <div class="row" style="margin-top: 20px;">
+      <button class="btn-whatsapp" id="btnOrcamento" type="button" style="background-color: #34b7f1; margin-top: 0; flex: 1;">📄 Orçamento</button>
+      <button class="btn-whatsapp" id="btnCobranca" type="button" style="background-color: #25d366; margin-top: 0; flex: 1;">💰 Cobrança</button>
+    </div>
 
-  <script>
+    <button class="btn-clear" id="btnClear" type="button">Limpar Tudo</button>
+    
+  </div> <script>
     // ===== Config =====
     const STORAGE_KEY = "freela_ti_itens";
     const ACRESCIMO_CARTAO = 0.05;
@@ -241,28 +250,36 @@
       }
     }
 
-    function enviarWhatsapp() {
+    // ===== Eventos dos Novos Botões =====
+    document.getElementById("btnOrcamento").addEventListener("click", () => enviarZap("orcamento"));
+    document.getElementById("btnCobranca").addEventListener("click", () => enviarZap("cobranca"));
+
+    function enviarZap(tipo) {
       if (itens.length === 0) return alert("Adicione pelo menos um serviço!");
 
       let somaBase = 0;
+      
+      // Caracteres blindados contra editores de texto bugados
+      const emojiFerramenta = decodeURIComponent("%F0%9F%9B%A0"); // 🛠️
+      const emojiCheck      = decodeURIComponent("%E2%9C%85");    // ✅
+      const emojiDinheiro   = decodeURIComponent("%F0%9F%92%B0"); // 💰
+      const emojiCartao     = decodeURIComponent("%F0%9F%92%B3"); // 💳
+      const emojiAviso      = decodeURIComponent("%E2%9A%A0");    // ⚠️
+      const emojiFoguete    = decodeURIComponent("%F0%9F%9A%80"); // 🚀
+      const emojiEstrela    = decodeURIComponent("%E2%AD%90");    // ⭐
+      const iconePix        = decodeURIComponent("%E2%97%87");    // ◇
 
-      // 1. Declaramos TODAS as variáveis e constantes no topo
-      const emojiFerramenta = "🛠️";
-      const emojiCheck = "✅";
-      const emojiDinheiro = "💰";
-      const emojiCartao = "💳";
-      const emojiAviso = "⚠️";
-      const emojiFoguete = "🚀";
-      const emojiEstrela = "⭐";
-      const linkGoogle = "https://share.google/9Kcq7yRdKH38euysc";
-
-      let msg = `*PEDROTX - SERVIÇOS DIGITAIS* ${emojiFerramenta}\n\n`;
-      msg += `Olá! Segue o orçamento e detalhamento dos serviços solicitados:\n\n`;
+      let msg = `*PEDROTX - SERVIÇOS DE TI* ${emojiFerramenta}\n\n`;
+      
+      if (tipo === "orcamento") {
+        msg += "Olá! Segue o orçamento detalhado dos serviços solicitados:\n\n";
+      } else {
+        msg += "Olá! Segue o resumo do serviço realizado e os dados para pagamento:\n\n";
+      }
 
       itens.forEach(item => {
         const total = Number(item.total) || 0;
         somaBase += total;
-
         msg += `${emojiCheck} *${String(item.servico).toUpperCase()}*\n`;
         msg += `└ Qtd: ${item.qtd} | Total: ${moedaBR(total)}\n\n`;
       });
@@ -273,20 +290,19 @@
       msg += `${emojiDinheiro} *TOTAL À VISTA (PIX): ${moedaBR(somaBase)}*\n`;
       msg += `${emojiCartao} *TOTAL NO CRÉDITO À VISTA: ${moedaBR(totalCartao)}*\n\n`;
 
-      msg += `Pagamento via PIX ◇\n`;
-      msg += `Chave: ${CHAVE_PIX}\n\n`;
+      // Se for COBRANÇA, incluímos os dados bancários e o aviso do cartão
+      if (tipo === "cobranca") {
+        msg += `Pagamento via PIX ${iconePix}\n`;
+        msg += `Chave: ${CHAVE_PIX}\n\n`;
+        msg += `${emojiAviso} *Nota:* O valor no cartão inclui acréscimo de 5% (válido para 1x). Para parcelamento, consulte as taxas.\n\n`;
+      }
 
-      // 2. Mantemos a nossa proteção contra prejuízos no parcelamento
-      msg += `${emojiAviso} *Nota:* O valor no cartão inclui acréscimo de 5% válido APENAS para crédito em 1x. Para parcelamento, favor me consultar sobre as taxas aplicáveis.\n`;
-      msg += `👉 _Se preferir pagar no cartão, me avise que eu gero o link de pagamento!_\n\n`;
+      // Gancho do Google (Prova social vai em ambos para ser profissional)
+      msg += `${emojiEstrela} *Conheça meu trabalho ou avalie no Google:*\n`;
+      msg += `https://share.google/9Kcq7yRdKH38euysc\n\n`;
 
-      // 3. E agora sim, o gancho do Google no final, usando as variáveis já declaradas
-      msg += `${emojiEstrela} *Conheça meu trabalho ou deixe sua avaliação no Google:*\n`;
-      msg += `${linkGoogle}\n\n`;
+      msg += `Fico no aguardo! ${emojiFoguete}`;
 
-      msg += `Fico no aguardo da sua confirmação! ${emojiFoguete}`;
-
-      // 4. Executa a abertura do WhatsApp
       const linkFinal = "https://wa.me/?text=" + encodeURIComponent(msg);
       window.open(linkFinal, "_blank");
     }
